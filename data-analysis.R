@@ -11,6 +11,7 @@ library(Amelia)
 library(rpart)
 library(MASS)
 library(dummies)
+library(ROCR)
 
 # ----------------------------------
 #        Load Data & Randomize
@@ -36,10 +37,9 @@ hr.data.types <- glimpse(hr.data)
 # be made into dummy variables for
 # proper analysis via the dummies
 # library
-sales.dummies <- dummy(hr.data$sales, sep = '_')
+sales.dummies <- dummy(hr.data$sales)
 salary.dummies <- dummy(hr.data$salary, sep = '_')
 # hr.data <- cbind(hr.data, dummy(hr.data$sales, sep = "_"), dummy(hr.data$salary, sep = '_'))
-# Drop original catagorical variables
 
 # ----------------------------------
 #     Visualize Distributions
@@ -104,6 +104,15 @@ hr.pred
 #    Find Significant Cutoff Point
 # ----------------------------------
 # Create a ROC Curve To Find Point
+p <- predict(model, newdata=subset(test,select=c(2,3,4,5,6,7,8)), type="response")
+prediction <- prediction(hr.pred, hr.data$left)
+perf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(perf)
+
+
+auc <- performance(pr, measure = "auc")
+auc <- auc$y.values[[1]]
+auc
 
 
 # ----------------------------------
