@@ -11,19 +11,19 @@ library(Amelia)
 library(rpart)
 library(MASS)
 library(dummies)
-library(ROCR)
+library(caTools)
+library(randomForest)
+
+# Set random seed
+set.seed(100)
 
 # ----------------------------------
 #        Load Data & Randomize
 # ----------------------------------
 # Full hr.data set
 hr.data <- read.csv('hr_data.csv', header = T)
-# minimize any systematic biases
-rows <- sample(nrow(hr.data))
-# reorganize hr.data to reflect random nature
-hr.data <- hr.data[rows,]
-# Smaller set of data
-hr.data <- sample_n(hr.data, 8000)
+# Smaller set of data & minimize any systematic biases
+hr.data <- sample_n(hr.data, 4000)
 
 # ----------------------------------
 #       View The Types Of Data
@@ -31,27 +31,10 @@ hr.data <- sample_n(hr.data, 8000)
 hr.data.types <- glimpse(hr.data) 
 
 # ----------------------------------
-#      Clean Data For Analysis
+#      Visualize Distributions
 # ----------------------------------
-# There are 2 varaibles that need to
-# be made into dummy variables for
-# proper analysis via the dummies
-# library
-sales.dummies <- dummy(hr.data$sales)
-salary.dummies <- dummy(hr.data$salary, sep = '_')
-# hr.data <- cbind(hr.data, dummy(hr.data$sales, sep = "_"), dummy(hr.data$salary, sep = '_'))
+# Only Interested In Certain Columns
 
-# ----------------------------------
-#     Visualize Distributions
-# ----------------------------------
-ggcorrplot(hr.data,
-           show.legend = T,
-           method = 'circle',
-           show.diag = T,
-           title = 'Correlataions Of HR Data',
-           colors = c('red', 'yellow', 'green'),
-           legend.title = 'Correlation Scale'
-           )
 
 # ----------------------------------
 #      Calculate Summary Stats.
@@ -76,62 +59,53 @@ missmap(hr.data,
 ##         1.Logistic Regression       ##
 ##                                     ##
 #########################################
-
+# Convert Factors Into Dummy Variables
+sales.dummies <- dummy(hr.data$sales, sep = '_')
+salary.dummies <- dummy(hr.data$salary, sep = '_')
+hr.data.cleaned <- cbind(hr.data, sales.dummies, salary.dummies)
+hr.data.cleaned <- hr.data.cleaned[,c(1:8,11:23)]
 
 # ----------------------------------
 #   Create Training & Test Splits
 # ----------------------------------
-
 # Create an 80/20 split
-split <- round(nrow(hr.data), .80)
-hr.train <- hr.data[1:split, ]
-hr.test <- hr.data[(split + 1):nrow(hr.data), ]
+split <- round(nrow(hr.data.cleaned) * .80)
+hr.train <- hr.data.cleaned[1:split, ]
+hr.test <- hr.data.cleaned[(split + 1):nrow(hr.data.cleaned), ]
 
 # ----------------------------------
 #  Run Benchmark Logistic Regresion
 # ----------------------------------
 # Logistic Model to predict whether an employee has left
+# FOR THIS LOGISTIC MODEL DO I HAVE TO WRAP THE RESPONSE
+# VARIABLE "LEFT" IN AS.FACTOR? FOR THE LOGISTIC REGRESSION
+# TO WORK PROPERLY?
 hr.model <- glm(left ~ ., family = 'binomial', hr.train)
 summary(hr.model)
 hr.pred <- predict(hr.model, hr.test, type = 'response')
-hr.pred
-
-# ----------------------------------
-#        Tune Logistic Model
-# ----------------------------------
 
 # ----------------------------------
 #    Find Significant Cutoff Point
 # ----------------------------------
-# Create a ROC Curve To Find Point
-p <- predict(model, newdata=subset(test,select=c(2,3,4,5,6,7,8)), type="response")
-prediction <- prediction(hr.pred, hr.data$left)
-perf <- performance(pr, measure = "tpr", x.measure = "fpr")
-plot(perf)
-
-
-auc <- performance(pr, measure = "auc")
-auc <- auc$y.values[[1]]
-auc
-
+# Create a ROC Curve To Find Cutoff Point
+colAUC(hr.pred, hr.test$left, plotROC = T)
+model.AUC <- colAUC(hr.pred, hr.test$left, plotROC = T)
+abline(h=model.AUC, col = 'red')
+text(.2,.9,cex = .8, labels = paste('Optimal Cutoff: ', round(model.AUC, 4)))
 
 # ----------------------------------
 #   Convert Probabilities To Class
 # ----------------------------------
 # 1 indicates the employee left,
 # 0 indicates the employee stayed
-model.cutoff <- .5
 
 # Covert model pred probabilities into classes
-p.class <- ifelse(hr.pred > model.cutoff, 1, 0)
+p.class <- ifelse(hr.pred > .7860, 1, 0)
 
 # Create a confusion matrix
-confusionMatrix(p.class, hr.data$left)
-
-
-
-
-
+# QUESTION: HOW TO CHANGE THE MATRIX TO SHOW 
+# 1 AS POSITIVE?
+confusionMatrix(p.class, hr.test$left)
 
 
 #########################################
@@ -139,20 +113,46 @@ confusionMatrix(p.class, hr.data$left)
 ##         2.Cluster Analysis          ##
 ##                                     ##
 #########################################
+hr.clusters <- hclust(dist(hr.data[,1:8]))
+plot(hr.clusters)
 
-
-
-
-
-
+# Cluster Cut
+hr.cluster.cut <- cutree(hr.clusters, 10)
+cluster.counts <- table(hr.cluster.cut)
+plot(cluster.counts)
 
 
 #########################################
 ##                                     ##
-##             3. Anova Test           ##
+##            3. Anova Test            ##
 ##                                     ##
 #########################################
+boxplot(hr.data)
 # Tukey's T-Test !!!!
+# Check All Assumptions !!!!
 
 
+
+#########################################
+##                                     ##
+##          4. Random Forest           ##
+##                                     ##
+#########################################
+# Get A Fresh Copy Of The hr.data
+rf.data <- read.csv('hr_data.csv', header = T)
+rf.data <- sample_n(rf.data, 4000)
+
+# Split Data
+rf.split <- round(nrow(rf.data) * .80)
+rf.train <- rf.data[1:rf.split, ]
+rf.test <- rf.data[(rf.split + 1):nrow(rf.data), ]
+
+# Create Model
+rf.model <- randomForest(as.factor(left) ~ ., rf.train, ntree = 20)
+summary(rf.model)
+rf.pred <- predict(rf.model, rf.test)
+summary(rf.pred)
+
+# View Confusion Matrix
+confusionMatrix(rf.pred, rf.test$left)
 
