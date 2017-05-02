@@ -21,14 +21,14 @@ hr.data <- read.csv('hr_data.csv', header = T)
 # Smaller set of data & minimize any system biases
 hr.data <- sample_n(hr.data, 4000)
 
+#########################################
+##                                     ##
+##          1. Data Exploration        ##
+##                                     ##
+#########################################
+
 # View The Types Of Data
 glimpse(hr.data) 
-
-#########################################
-##                                     ##
-##          Data Exploration           ##
-##                                     ##
-#########################################
 
 # Employee Status Chart
 ggplot(hr.data, aes(x = left)) + 
@@ -39,7 +39,7 @@ ggplot(hr.data, aes(x = left)) +
 ggplot(hr.data, aes(x = sales)) +
   geom_histogram(bins = 10,stat = 'count', binwidth = .5) +
   theme_minimal(base_size = 16, base_family = 'Roboto') + 
-  geom_bar(aes(fill = sales)) + 
+  geom_bar(aes(fill = 'red')) + 
   theme(axis.text.x = element_text(size=9, angle=45)) +
   labs(title = 'Employee Count By Department', x = 'Department', y = 'Count')
 
@@ -79,7 +79,7 @@ missmap(hr.data,
 
 #########################################
 ##                                     ##
-##        1.Logistic Regression        ##
+##        2.Logistic Regression        ##
 ##                                     ##
 #########################################
 # Convert Factors Into Dummy Variables
@@ -125,7 +125,7 @@ confusionMatrix(p.class, hr.test$left)
 
 #########################################
 ##                                     ##
-##         2.Cluster Analysis          ##
+##         3.Cluster Analysis          ##
 ##                                     ##
 #########################################
 hr.clusters <- pvclust(hr.data[,1:8])
@@ -133,7 +133,7 @@ plot(hr.clusters, main = 'HR Data Cluster')
 
 #########################################
 ##                                     ##
-##            3. Anova Tests           ##
+##            4. Anova Tests           ##
 ##                                     ##
 #########################################
 
@@ -171,7 +171,7 @@ ggplot(hr.data,
 
 #########################################
 ##                                     ##
-##           4. Random Forest          ##
+##           5. Random Forest          ##
 ##                                     ##
 #########################################
 
@@ -192,3 +192,4 @@ summary(rf.pred)
 
 # View Confusion Matrix
 confusionMatrix(rf.pred, rf.test$left)
+
