@@ -4,11 +4,8 @@
 library(ggplot2)
 library(caret)
 library(dplyr)
-library(cluster)
 library(pvclust)
 library(Amelia)
-library(rpart)
-library(MASS)
 library(dummies)
 library(caTools)
 library(randomForest)
@@ -140,36 +137,44 @@ plot(hr.clusters, main = 'HR Data Cluster')
 ##                                     ##
 #########################################
 
-# ANOVA: Time_Spend_Company By Sales
+# ANOVA: Time Spent At Company By Sales
 anova <- aov(time_spend_company ~ sales, data = hr.data)
 summary(anova)
 TukeyHSD(anova, conf.level = .95)
-plot(time_spend_company ~ sales, 
-     data = hr.data, 
-     main = 'ANOVA: Time Spent At Company By Dept.',
-     xlab = '',
-     ylab = 'Time Spent At Company', 
-     las = 2,
-     cex = .6
-     )
+ggplot(hr.data, 
+       aes(y = time_spend_company, x = sales)) + 
+       geom_boxplot(outlier.color = 'red', 
+                    outlier.size = .5,
+                    fill = '#4c90ff', 
+                    color = '#2a5fb7') + 
+       labs(title = 'ANOVA: Time Spent At Company By Dept.', 
+            x = 'Employee Department', 
+            y = 'Time Spent At Company') +
+       theme_minimal(base_family = 'Roboto') +
+       theme(axis.text.x = element_text(size=9, angle=45))
 
-# ANOVA SATISFACTION LEVEL BY SALARY
+# ANOVA: SATISFACTION LEVEL BY SALARY
 anova2 <- aov(satisfaction_level ~ salary, data = hr.data)
 summary(anova2)
 TukeyHSD(anova2)
-plot(satisfaction_level ~ salary, 
-     data = hr.data, 
-     col = c('orange', 'red', 'green'),
-     main = 'ANOVA: Satisfaction Level By Salary',
-     xlab = 'Salary Level',
-     ylab = 'Satisfaction Level'
-     )
+ggplot(hr.data, 
+       aes(y = satisfaction_level, x = salary)) + 
+       geom_boxplot(outlier.color = 'red', 
+                    outlier.size = .5,
+                    fill = c('#ff4f7d', '#4fa1ff', '#4fff95'), 
+                    color = '#333333') + 
+       labs(title = 'ANOVA: Satisfaction Level By Salary', 
+            x = 'Salary Level', 
+            y = 'Satisfaction Level') +
+       theme_minimal(base_family = 'Roboto') +
+       theme(axis.text.x = element_text(size=9, angle=45))
 
 #########################################
 ##                                     ##
 ##           4. Random Forest          ##
 ##                                     ##
 #########################################
+
 # Get A Fresh Copy Of The hr.data
 rf.data <- read.csv('hr_data.csv', header = T)
 rf.data <- sample_n(rf.data, 4000)
